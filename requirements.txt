@@ -1,0 +1,24 @@
+accelerate==0.34.2
+beautifulsoup4==4.12.3
+boto3==1.35.17
+elasticsearch==8.15.1
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+faster-whisper==1.0.3
+feedparser==6.0.11
+gliner==0.2.11
+gliner-spacy==0.0.10
+langchain==0.2.16
+langchain-core==0.2.38
+langchain-text-splitters==0.2.4
+librosa==0.10.2.post1
+openai==1.43.1
+pydub==0.25.1
+replicate==0.32.1
+sentence-transformers==3.0.1
+sentencepiece==0.2.0
+spacy==3.7.6
+spacy-legacy==3.0.12
+spacy-loggers==1.0.5
+streamlit==1.38.0
+torch==2.4.1
+transformers==4.44.2
