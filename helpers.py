@@ -1,4 +1,5 @@
 import os
+import imageio
 from pydub import AudioSegment
 from pydub.utils import which
 import io
@@ -6,8 +7,11 @@ import time
 from gliner import GLiNER
 from collections import defaultdict
 
-# Manually set ffmpeg path
-AudioSegment.ffmpeg = "./ffmpeg/ffmpeg-7.0.2"
+# # Manually set ffmpeg path
+# AudioSegment.ffmpeg = "./ffmpeg/ffmpeg-7.0.2"
+
+# Set ffmpeg path from imageio
+AudioSegment.ffmpeg = imageio.plugins.ffmpeg.get_exe()
 
 def shrink_mp3(mp3_file):
     # Split the file path into directory, base filename, and extension
