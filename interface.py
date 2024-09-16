@@ -124,6 +124,7 @@ if __name__ == "__main__":
                                 st.session_state['transcription_complete'] = False
 
         if st.session_state.get('podcast_downloaded', False):
+            print(st.session_state['episode_details']['filenames'][0])
             episode_details = transcribe_episode(st.session_state['episode_details'], replicate_client)
 
         if st.session_state.get('transcription_complete', False):
