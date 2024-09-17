@@ -22,4 +22,3 @@ spacy-loggers==1.0.5
 streamlit==1.38.0
 torch==2.4.1
 transformers==4.44.2
-imageio[ffmpeg]

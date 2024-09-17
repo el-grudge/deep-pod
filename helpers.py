@@ -32,7 +32,6 @@ def shrink_mp3(mp3_file):
     return audio_blob
 
 def transcribe(replicate_client, mp3_file):
-
     audio_blob = shrink_mp3(mp3_file)
 
     # create sepaarte function

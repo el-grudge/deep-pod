@@ -1,10 +1,7 @@
-from utils import get_encoder
 import time
 
-encoder = get_encoder()
-
 # search
-def search(query, index_name, es_client):
+def search(query, encoder, index_name, es_client):
     # Encode the query
     query_vector = encoder.encode(query).tolist()
 
@@ -62,14 +59,12 @@ def llm(openai_client, prompt):
     return response.choices[0].message.content
 
 # rag 
-def rag(query, oa_client, index_name, es_client):
+def rag(query, sentence_encoder, oa_client, index_name, es_client):
     query = query
-    search_results = search(query, index_name, es_client)
+    search_results = search(query, sentence_encoder, index_name, es_client)
     prompt = build_prompt(query, search_results)
     answer = llm(oa_client, prompt)
     
     for word in answer.split():
         yield word + " "
         time.sleep(0.05)
-
-    # return answer

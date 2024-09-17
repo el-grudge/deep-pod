@@ -1,19 +1,16 @@
 import spacy
-from sentence_transformers import SentenceTransformer, util
-# from elasticsearch import Elasticsearch
-# from elasticsearch.helpers import bulk
+from sentence_transformers.util import pytorch_cos_sim
 import requests
 import os
 import concurrent.futures
 from urllib.parse import urlparse
 import feedparser
 
-sentence_encoder = SentenceTransformer("sentence-transformers/sentence-t5-base")
 nlp = spacy.load('en_core_web_sm')
-# es_client = Elasticsearch('http://localhost:9200')
 
-def get_encoder():
-    return sentence_encoder
+def remove_punctuation(text):
+    doc = nlp(text)
+    return ' '.join([token.text.replace('.','').lower() for token in doc if not token.is_punct])
 
 def get_episode_title(url):
     parsed_url = urlparse(url)
@@ -22,21 +19,18 @@ def get_episode_title(url):
     episode_title = path.split('/')[3].replace('-', ' ')
     return podcast_id, episode_title
 
-def get_episode_details(podcast_id):
+def get_podcast_details(podcast_id):
     url = f'https://itunes.apple.com/lookup?id={podcast_id}'
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json().get('results', [])[0]
+        podcast_details = response.json().get('results', [])[0]
+        podcast_details['status'] = 'Success'
     else:
-        return "Failed to fetch podcast details. Please try again."
+        podcast_details = {}
+        podcast_details['status'] = 'Fail'
+    return podcast_details
 
-def remove_punctuation(text):
-    # Process the text with spaCy
-    doc = nlp(text)
-    # Create a list of tokens without punctuation
-    return ' '.join([token.text.replace('.','').lower() for token in doc if not token.is_punct])
-
-def get_feed_details(feed_url):
+def get_feed_details(sentence_encoder, feed_url):
     # parse_podcast_feed
     feed = feedparser.parse(feed_url)
 
@@ -60,11 +54,11 @@ def get_feed_details(feed_url):
 
     return docuemnts
 
-def search_for_episode(episode_title, feed_details):
+def search_for_episode(sentence_encoder, episode_title, feed_details):
     """search for episode """
     query_vector = sentence_encoder.encode(remove_punctuation(episode_title)).tolist()
 
-    [d.update({'cos_sim': util.pytorch_cos_sim(d['title_vector'], query_vector)}) for d in feed_details]
+    [d.update({'cos_sim': pytorch_cos_sim(d['title_vector'], query_vector)}) for d in feed_details]
 
     return max(feed_details, key=lambda x: x['cos_sim'])
 
@@ -76,18 +70,13 @@ def search_podcasts(term):
         'limit': 3
     }
     response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json().get('results', [])
+    if response.status_code == 200 and response.json().get('resultCount') > 0:
+        found_podcasts = {'podcasts': response.json().get('results', [])}
+        found_podcasts['status'] = 'Success'
     else:
-        return "Failed to search for podcasts. Please try again."
-
-def get_podcast_details(podcast_id):
-    url = f'https://itunes.apple.com/lookup?id={podcast_id}'
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json().get('results', [])[0]
-    else:
-        return f"Error: {response.status_code} - {response.text}"
+        found_podcasts = {}
+        found_podcasts['status'] = 'Fail'
+    return found_podcasts
 
 def fetch_latest_episode(feed_url):
     feed = feedparser.parse(feed_url)
@@ -98,12 +87,13 @@ def fetch_latest_episode(feed_url):
             'title': latest_episode['title'],
             'summary': latest_episode['summary'],
             'published_date': latest_episode['published'],
-            'audio_urls': latest_episode.enclosures[0]['href']
+            'audio_urls': latest_episode.enclosures[0]['href'],
+            'status': 'Success'
         }
 
-        return feed_dict
     else:
-        return "No episodes found in the RSS feed."
+        feed_dict = {'status': 'Fail'}
+    return feed_dict
 
 def download_audio_file(audio_url, file_name):
     """Download the audio file from the given URL."""
@@ -131,51 +121,3 @@ def download_all(urls, podcast_name):
         # Ensure all tasks are completed
         concurrent.futures.wait(futures)
     return list(futures.values())
-
-# encode
-def encode_documents(chunks):
-
-    documents = []
-
-    for sentence in chunks:
-        temp_dict = {
-            'text': sentence['text'],
-            'text_vector': sentence_encoder.encode(sentence["text"]).tolist()
-        }
-        documents.append(temp_dict)
-    
-    return documents
-
-# create index 
-def create_index(es_client, docs):
-    chunks = docs['chunks']
-    documents = encode_documents(chunks)
-    # Setup elasticsearch
-    index_name = "podcast-transcriber"
-
-    # Create mapping
-    index_settings = {
-        "settings": {
-            "number_of_shards": 1,
-            "number_of_replicas": 0
-        },
-        "mappings": {
-            "properties": {
-                "text": {"type": "text"},
-                "text_vector": {"type": "dense_vector", "dims": 768},
-            }
-        }
-    }
-
-    es_client.indices.delete(index=index_name, ignore_unavailable=True)
-    es_client.indices.create(index=index_name, body=index_settings)
-
-    # add documents 
-    for doc in documents:
-        try:
-            # es_client.index(index=index_name, document=doc)
-            es_client.index(index=index_name, body=doc)
-        except Exception as e:
-            print(e)
-
-    return index_name
