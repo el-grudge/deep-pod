@@ -1,77 +1,5 @@
 # deep-pod
 
-## tasks
-
-- [x] create transcribe function in utils 
-- [x] modify utils.user_interface to take specific episode  
-- [x] ~~split create index from rag~~
-- [x] create get index function that can be used by rag, should take index name as parameter
-- [x] write problem description
-- [x] rag flow
-- [ ] retrieval evaluation
-- [ ] rag evaluation
-- [x] interface
-- [ ] ingestion
-- [ ] monitoring
-- [ ] containerization
-- [ ] reproducibility
-- [ ] hybrid search (keyword + semantic)
-- [ ] document re-ranking 
-- [ ] user query rewriting 
-- [x] deploy to cloud
-- [x] use gliner to list named entities
-- [ ] local transcription 
-- [ ] cpu / gpu transcription
-- [x] gliner: print top 5 entities per topic in table
-- [ ] open source llms
-- [ ] gliner optimization
-- [ ] create a dynamic update state function
-- [ ] remove the transcribe episode function from the interface
-
-## criteria
-* Problem description
-    * 0 points: The problem is not described
-    * 1 point: The problem is described but briefly or unclearly
-    * 2 points: The problem is well-described and it's clear what problem the project solves
-* RAG flow
-    * 0 points: No knowledge base or LLM is used
-    * 1 point: No knowledge base is used, and the LLM is queried directly
-    * 2 points: Both a knowledge base and an LLM are used in the RAG flow 
-* Retrieval evaluation
-    * 0 points: No evaluation of retrieval is provided
-    * 1 point: Only one retrieval approach is evaluated
-    * 2 points: Multiple retrieval approaches are evaluated, and the best one is used
-* RAG evaluation
-    * 0 points: No evaluation of RAG is provided
-    * 1 point: Only one RAG approach (e.g., one prompt) is evaluated
-    * 2 points: Multiple RAG approaches are evaluated, and the best one is used
-* Interface
-   * 0 points: No way to interact with the application at all
-   * 1 point: Command line interface, a script, or a Jupyter notebook
-   * 2 points: UI (e.g., Streamlit), web application (e.g., Django), or an API (e.g., built with FastAPI) 
-* Ingestion pipeline
-   * 0 points: No ingestion
-   * 1 point: Semi-automated ingestion of the dataset into the knowledge base, e.g., with a Jupyter notebook
-   * 2 points: Automated ingestion with a Python script or a special tool (e.g., Mage, dlt, Airflow, Prefect)
-* Monitoring
-   * 0 points: No monitoring
-   * 1 point: User feedback is collected OR there's a monitoring dashboard
-   * 2 points: User feedback is collected and there's a dashboard with at least 5 charts
-* Containerization
-    * 0 points: No containerization
-    * 1 point: Dockerfile is provided for the main application OR there's a docker-compose for the dependencies only
-    * 2 points: Everything is in docker-compose
-* Reproducibility
-    * 0 points: No instructions on how to run the code, the data is missing, or it's unclear how to access it
-    * 1 point: Some instructions are provided but are incomplete, OR instructions are clear and complete, the code works, but the data is missing
-    * 2 points: Instructions are clear, the dataset is accessible, it's easy to run the code, and it works. The versions for all dependencies are specified.
-* Best practices
-    * 1 point: Hybrid search: combining both text and vector search (at least evaluating it)
-    * 1 point: Document re-ranking
-    * 1 point: User query rewriting
-* Bonus points (not covered in the course)
-    * 2 point: Deployment to the cloud
-
 ## Problem description
 
 This is deep-pod 🎙️, a streamlit app that allows you to interact with your podcast through:
@@ -134,6 +62,8 @@ A prompt that includes the search query and the top 5 documents is constructed.
 
 And for text generation, I'm using GPT 4o 🤖 (Less than $1 over the past 4 days) (https://lnkd.in/e9fiapjS). The prompt is passed to the completion API and the contents are retrieved and presented to the user.
 
+Check the RAG code [here](rag.py)
+
 ## Retrieval evaluation
 
 ⚠️ In progress (...)
@@ -146,12 +76,16 @@ And for text generation, I'm using GPT 4o 🤖 (Less than $1 over the past 4 day
 
 A streamlit interface is built on top of the app. Through the interface, users can download the podcast to interact with it through chat, summary, or topic modelling. 
 
+Check the interface code [here](interface.py)
+
 ## Ingestion pipeline 
 
 Data ingestion is handled with a python script. The script does two things:
 
-1- Uses the iTunes API to search and download for the requested episode
-2- Creates an Elasticsearch index with the encoded text
+1. Uses the iTunes API to search and download for the requested episode
+2. Creates an Elasticsearch index with the encoded text
+
+Check the ingestion code [here](ingest.py)
 
 ## Monitoring
 
@@ -163,7 +97,37 @@ Data ingestion is handled with a python script. The script does two things:
 
 ## Reproducibility 
 
-⚠️ In progress (...)
+To reproduce the work from the GitHub repository "deep-pod":
+
+**Setup**
+- Clone the repo: `git clone https://github.com/el-grudge/deep-pod.git`
+- Install required packages: `pip install -r requirements.txt`
+- Download language model with `python -m spacy download en_core_web_sm`
+
+**Access Data**
+- Episodes can be downloaded by providing a URL or podcast name.
+
+**APIs**
+
+You will need access to the following APIs:
+
+1. **OpenAI API Key**:
+   - Sign up or log in to [OpenAI](https://beta.openai.com/signup/).
+   - Navigate to [API Keys](https://platform.openai.com/account/api-keys) to create and manage your API key.
+
+2. **Replicate API Key**:
+   - Create an account on [Replicate](https://replicate.com/).
+   - Find your API key in the [account settings](https://replicate.com/account).
+
+3. **Elasticsearch API Key**:
+   - Use [Elasticsearch Service](https://www.elastic.co/cloud/elasticsearch-service) and generate API keys via Kibana’s [API key management](https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-create-api-key.html).
+
+4. **Elasticsearch Cloud ID**:
+   - The Cloud ID is available in the [Elasticsearch Cloud console](https://www.elastic.co/guide/en/cloud/current/ec-cloud-id.html) after deploying your instance.
+
+**Run the App**
+
+Run the app using `streamlit run interface.py`
 
 ## Best practices
 
@@ -171,31 +135,10 @@ Data ingestion is handled with a python script. The script does two things:
 
 ## Bonus points (not covered in the course)
 
-⚠️ In progress (...)
+The streamlit app was deployed on the streamlit community cloud, where it can be accessed [here](https://deep-pod.streamlit.app/). 
 
+Also, Elasticsearch cloud was used as the vector store. Alternatively, Elasticsearch can be run locally using the following command:
 
-### steps
-1. download episode
-2. shrink mp3 file 
-3. transcribe with replicate
-4. batch and encode 
-5. search
-6. prompt
-7. generate
-8. rag 
-
-### commands
-```bash
-docker run -it \
-    --rm \
-    --name elasticsearch \
-    -p 9200:9200 \
-    -p 9300:9300 \
-    -e "discovery.type=single-node" \
-    -e "xpack.security.enabled=false" \
-    docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-```
-**with increased memory limit**
 ```bash
 docker network create elastic
 
@@ -209,33 +152,6 @@ docker run -it \
     -e "ES_JAVA_OPTS=-Xms2g -Xmx2g" \
     --memory=4g \
     docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-
-docker rm elasticsearch
 ```
 
-```bash
-pip install --upgrade transformers accelerate langchain langchain-text-splitters openai pydub feedparser librosa faster-whisper pydub torch sentence_transformers==2.7.0 elasticsearch=8.15.0 replicate spacy boto3 gliner gliner-spacy sentencepiece streamlit beautifulsoup4
-
-python -m spacy download en_core_web_sm
-```
-
-**git**
-echo "# deep-pod" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin git@github.com:el-grudge/deep-pod.git
-git push -u origin main
-
-**requirements**
-pip freeze | grep -E 'transformers|accelerate|langchain|langchain-text-splitters|openai|pydub|feedparser|librosa|faster-whisper|torch|sentence-transformers|elasticsearch|replicate|spacy|boto3|gliner|gliner-spacy|sentencepiece|streamlit|beautifulsoup4' > requirements.txt
-
-**ffmpeg**
-ffmpeg -i output.webm -filter_complex \
-"[0:v]trim=0:20,setpts=PTS-STARTPTS[v1]; \
- [0:v]trim=59:95,setpts=PTS-STARTPTS[v2]; \
- [0:v]trim=215,setpts=PTS-STARTPTS[v3]; \
- [v1][v2][v3]concat=n=3:v=1:a=0[vout]" \
--map "[vout]" -c:v libvpx-vp9 -crf 30 -b:v 0 output_trimmed_video.webm
-
+Make sure to change the code that defines the Elasticsearch client to point to  [localhost:9200](localhost:9200)
