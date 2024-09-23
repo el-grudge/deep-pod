@@ -9,6 +9,12 @@ from utils import search_podcasts
 from ingest import download_episode_from_url, download_episode_from_name, create_index
 from helpers import transcribe, list_topics
 from rag import rag
+import json
+
+
+def update_session(**kwargs):
+    for k, v in kwargs.items():
+        st.session_state[k] = v
 
 def transcribe_episode(encoder, episode_details, replicate_client):
     if not st.session_state.get('transcription_complete', False):
@@ -18,6 +24,7 @@ def transcribe_episode(encoder, episode_details, replicate_client):
             index_name = create_index(encoder, es_client, episode_details)
             st.session_state['episode_details'] = episode_details
             st.session_state['index_name'] = index_name
+            st.session_stated['index_created'] = True
             st.session_state['es_client'] = es_client
             st.session_state['transcription_complete'] = True
             st.session_state['chat_with_your_podcast'] = True
@@ -48,8 +55,10 @@ if __name__ == "__main__":
         
         option = st.radio(
             "Choose an option:",
-            ("1. Provide the iTunes URL for a specific podcast episode",
-            "2. Provide a name of a podcast to explore its most recent episode")
+            ("1. Try a sample",
+             "2. Provide the iTunes URL for a specific podcast episode",
+             "3. Provide a name of a podcast to explore its most recent episode"),
+            index=None,
         )
 
         if 'current_option' not in st.session_state or st.session_state['current_option'] != option:
@@ -66,7 +75,25 @@ if __name__ == "__main__":
             if 'messages' in st.session_state:
                 del st.session_state['messages']
 
-        if option.startswith("1"):
+        if option == "1. Try a sample":
+            with open('sample/episode_details.json', 'r') as f:
+                episode_details = json.load(f)
+            with st.spinner("Preparing episode..."):
+                if not st.session_state.get('index_created', False):
+                    index_name = create_index(sentence_encoder, es_client, episode_details)
+                    update_session(index_name=index_name, index_created=True)
+                podcast_option=None
+                user_input=None
+                if episode_details['status'] == 'Success':
+                    st.success(episode_details['status_message'])
+                    st.session_state['episode_details'] = episode_details
+                    st.session_state['podcast_downloaded'] = True
+                    st.session_state['transcription_complete'] = False
+                else:
+                    st.warning(episode_details['status_message'])
+                    st.session_state['podcast_downloaded'] = False
+
+        elif option == "2. Provide the iTunes URL for a specific podcast episode":
             episode_url = st.text_input("Enter the iTunes URL of the episode you want:")
             if st.button("Search Episode"):
                 with st.spinner('Downloading episode...'):
@@ -76,11 +103,12 @@ if __name__ == "__main__":
                         st.session_state['episode_details'] = episode_details
                         st.session_state['podcast_downloaded'] = True
                         st.session_state['transcription_complete'] = False
+                        st.session_stated['index_created'] = False
                     else:
                         st.warning(episode_details['status_message'])
                         st.session_state['podcast_downloaded'] = False
 
-        elif option.startswith("2"):
+        elif option == "3. Provide a name of a podcast to explore its most recent episode":
             term = st.text_input("Enter a search term for podcasts:")
             if st.button("Search Podcasts"):
                 print(term)
@@ -108,14 +136,16 @@ if __name__ == "__main__":
                             st.session_state['episode_details'] = episode_details
                             st.session_state['podcast_downloaded'] = True
                             st.session_state['transcription_complete'] = False
+                            st.session_stated['index_created'] = False
                         else:
                             st.warning(episode_details['status_message'])
                             st.session_state['podcast_downloaded'] = False
-                            
 
         if st.session_state.get('podcast_downloaded', False):
-            print('transcribe 1')
-            episode_details = transcribe_episode(sentence_encoder, st.session_state['episode_details'], replicate_client)
+            if option != "1. Try a sample":
+                episode_details = transcribe_episode(sentence_encoder, st.session_state['episode_details'], replicate_client)
+            else:
+                st.session_state['transcription_complete'] = True
 
         if st.session_state.get('transcription_complete', False):
             if st.session_state['transcription_complete']:
