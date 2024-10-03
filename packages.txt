@@ -1,4 +1,1 @@
 ffmpeg
-build-essential
-wget
-tar
