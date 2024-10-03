@@ -1,3 +1,6 @@
+import pysqlite3
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 from streamlit_functions import *
 from ingest import download_podcast, transcribe_podcast, encode_podcast, index_podcast
