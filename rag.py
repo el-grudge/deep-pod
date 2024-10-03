@@ -37,7 +37,24 @@ def search(query, **kwargs):
         # Execute the search query
         results = kwargs['vector_db_client'].search(index=kwargs['index_name'], body=search_query)
         results = results['hits']['hits']
-    
+    elif vector_db=="3. ChromaDB":
+        # Encode the query
+        if kwargs['sentence_encoder'] == "1. T5":
+            query_vector = kwargs['encoder'].encode(query).tolist()
+        elif kwargs['sentence_encoder'] == "2. OpenAI":
+            query_vector = kwargs['embedding_client'].embeddings.create(model=kwargs['embedding_model'], input=query).data[0].embedding[:768]
+        
+        # Perform cosine similarity search in ChromaDB
+        results = kwargs['vector_db_client'].get_or_create_collection(kwargs['index_name']).query(
+            query_embeddings=[query_vector],
+            n_results=kwargs['num_results'],
+            include=["metadatas", "documents", "distances"]
+        )
+        
+        # return results["metadatas"]
+        results = results["metadatas"][0]
+
+
     return results
 
 # prompt

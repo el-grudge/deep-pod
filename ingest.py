@@ -31,8 +31,21 @@ def create_es_index(client, index_name):
     
     return client.indices.get_alias(index=index_name)
 
-def create_chroma_index():
-    ...
+def create_chroma_index(client, index_name):
+    existing_collections = client.list_collections()
+
+    # Check if the collection exists
+    if index_name in existing_collections[0].name:
+        # Delete the collection if it exists
+        client.delete_collection(index_name)
+
+    # Create or get a collection with cosine distance
+    index = client.get_or_create_collection(
+        name=index_name,
+        metadata={"hnsw:space": "cosine"}
+    )
+
+    return index
 
 def create_index(**kwargs):
     vector_db = kwargs['vector_db']
@@ -42,7 +55,7 @@ def create_index(**kwargs):
     elif vector_db == "2. Elasticsearch":
         return create_es_index(client=kwargs['vector_db_client'], index_name=kwargs['index_name'])
     elif vector_db == "3. ChromaDB":
-        ... # create_chroma_index()
+        return create_chroma_index(client=kwargs['vector_db_client'], index_name=kwargs['index_name'])
 
 def download_episode_from_url(url, sentence_encoder, **kwargs):
     try:
@@ -204,6 +217,17 @@ def populate_es_index(documents, index_name, client):
 
     return index_name
 
+def populate_chroma_collection(documents, collection):
+    ids = [str(i) for i in range(len(documents))]
+    embeddings = [doc['text_vector'] for doc in documents]
+    texts = [doc['text'] for doc in documents]
+    
+    collection.add(
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=[{"text": text} for text in texts]
+    )
+
 def index_podcast(**kwargs):
     episode_details = kwargs['episode_details']
     vector_db = kwargs['vector_db']
@@ -212,4 +236,5 @@ def index_podcast(**kwargs):
         populate_minsearch_index(episode_details['chunks'], kwargs['index'])
     elif vector_db=="2. Elasticsearch":
         populate_es_index(episode_details['documents'], kwargs['index_name'], kwargs['vector_db_client'])
-
+    elif vector_db=="3. ChromaDB":
+        populate_chroma_collection(episode_details['documents'], kwargs['index'])        

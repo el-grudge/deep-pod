@@ -7,6 +7,7 @@ from elasticsearch.exceptions import AuthenticationException, ConnectionError
 from ingest import create_index
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from sentence_transformers import SentenceTransformer
+import chromadb
 
 def update_session(**kwargs):
     for k, v in kwargs.items():
@@ -20,7 +21,9 @@ def reset_settings():
     st.session_state.clear()
 
 def choose_podcast_option():
-    st.header("Select a podcast source")
+    help_message = "Recommended choice: Try a sample.\n\nUse the iTunes URL option if you want to interact with a specific episode.\n\nUse the name option if you want to interact with a podcast's most recent episode."
+
+    st.header("Select a podcast source", help=help_message)
     episode_option = st.radio(
         "Choose your option:",
         options = (
@@ -52,7 +55,8 @@ def choose_podcast_option():
             st.warning("Please enter a valid search term.")
 
 def choose_encoder():
-    st.subheader('Select a sentence encoder')
+    help_message = "Recommended choice: T5.\n\nThe OpenAI tokenizer is less performant.\n\n⚠️ Please note that an API key will be required in order to use the OpenAI tokenizer, which may incur an additional cost. For more details see: https://openai.com/index/openai-api/"
+    st.subheader('Select a sentence encoder', help=help_message)
     sentence_encoder = st.radio(
         "Choose your option:",
         options = (
@@ -77,7 +81,8 @@ def choose_encoder():
                 st.warning("Invalid API key. Please provide a valid API token.")
 
 def choose_transcription_method():
-    st.subheader('Select a transcription method')
+    help_message = "Recommended choice: Replicate.\n\nUse the local transcription if you have access to a GPU and can deploy this app locally.\n\n⚠️ Please note that an API key will be required in order to use the Replicate transcriber. For more details see: https://replicate.com/home"
+    st.subheader('Select a transcription method', help=help_message)
     if st.session_state.get('episode_option', False):
         if st.session_state['episode_option'] != "1. Try a sample":
             transcription_method = st.radio(
@@ -105,7 +110,8 @@ def choose_transcription_method():
             update_session(transcription_method_selected=True)
 
 def choose_vector_db():
-    st.subheader('Select a vector database')
+    help_message = "Recommended choice: ChromaDB.\n\nUse Minsearch if you want a quick preview of the app.\n\nElasticsearch is less performant.\n\n⚠️ Please note that an API key will be required in order to use the Elasticsearch vectorb database. For more details see: https://elasticsearch-py.readthedocs.io/en/v8.10.1/quickstart.html"
+    st.subheader('Select a vector database', help=help_message)
     st.session_state['index_name'] = "podcast-transcriber"
     vector_db = st.radio(
         "Choose your option:",
@@ -140,10 +146,15 @@ def choose_vector_db():
             except Exception as e:
                 st.warning(f"An error occurred: {e}")
     elif vector_db=="3. ChromaDB":
-        st.warning("Local transcription under development")
+        chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        update_session(vector_db=vector_db, vector_db_client=chroma_client)
+        update_session(index=create_index(**st.session_state))
+        update_session(vector_db_selected=True, index_created=True)
+        st.success(f"Index {st.session_state['vector_db_client'].list_collections()[0].name} was created successfully.")
 
 def choose_llm():
-    st.subheader('Select an LLM')
+    help_message = "Recommended choice: FLAN-5.\n\nUse GPT-4o if want to interact with a more conversant LLM.\n\n⚠️ Please note that an API key will be required in order to use GPT-4o, which may incur an additional cost. For more details see: https://openai.com/index/openai-api/"
+    st.subheader('Select an LLM', help=help_message)
     llm_option = st.radio(
         "Choose your option:",
         options = (

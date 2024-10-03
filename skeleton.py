@@ -87,30 +87,7 @@ if __name__ == "__main__":
         # interact
         if st.session_state['podcast_indexed']:
             update_session(interaction_started=True)
-            chatbox_container = st.container()
-            with chatbox_container:
-                st.subheader("Chat with your podcast")
-                episode_details = st.session_state['episode_details']
-                index_name = st.session_state['index_name']
-
-                if "messages" not in st.session_state:
-                    st.session_state.messages = []
-
-                for message in st.session_state.messages:
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"])
-
-                if query := st.chat_input(""):
-                    st.session_state.messages.append({"role": "user", "content": query})
-                    with st.chat_message("user"):
-                        st.markdown(query)
-
-                    with st.chat_message("assistant"):
-                        response = st.write_stream(rag(query, **st.session_state))
-
-                    st.session_state.messages.append({"role": "assistant", "content": response})
-
-                st.header("Need some ideas?")
+            with st.expander("Need some ideas?"):
                 fig_col1, fig_col2 = st.columns(2)
 
                 with fig_col1:
@@ -140,3 +117,26 @@ if __name__ == "__main__":
                             data = {key: words + [''] * (max_length - len(words)) for key, words in entities.items()}
                             df = pd.DataFrame(data)
                             st.dataframe(df, hide_index=True, height=400)
+
+            chatbox_container = st.container()
+            with chatbox_container:
+                st.subheader("Chat with your podcast")
+                episode_details = st.session_state['episode_details']
+                index_name = st.session_state['index_name']
+
+                if "messages" not in st.session_state:
+                    st.session_state.messages = []
+
+                for message in st.session_state.messages:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+
+                if query := st.chat_input(""):
+                    st.session_state.messages.append({"role": "user", "content": query})
+                    with st.chat_message("user"):
+                        st.markdown(query)
+
+                    with st.chat_message("assistant"):
+                        response = st.write_stream(rag(query, **st.session_state))
+
+                    st.session_state.messages.append({"role": "assistant", "content": response})
