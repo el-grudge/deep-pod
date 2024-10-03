@@ -6,7 +6,6 @@ import concurrent.futures
 from urllib.parse import urlparse
 import feedparser
 from pydub import AudioSegment
-import json
 import nltk
 nltk.download('punkt_tab')
 from nltk.tokenize import sent_tokenize
@@ -135,30 +134,6 @@ def download_all(urls, podcast_name):
         concurrent.futures.wait(futures)
     return list(futures.values())
 
-# def shrink_and_split_mp3(mp3_file):
-#     directory, filename = os.path.split(mp3_file)
-#     basename, ext = os.path.splitext(filename)
-#     part_one_path = os.path.join(directory, f"{basename}_1{ext}")
-#     part_two_path = os.path.join(directory, f"{basename}_2{ext}")
-
-#     audio = AudioSegment.from_mp3(mp3_file)
-#     # Set desired sample rate and bit depth to control size
-#     audio = audio.set_frame_rate(16000)
-#     audio = audio.set_sample_width(16 // 8)  # 8 bits = 1 byte    
-#     audio = audio.set_channels(1)  # Convert to mono
-    
-#     # Get the length of the audio file (in milliseconds)
-#     audio_length = len(audio)
-#     midpoint = audio_length // 2
-#     first_half = audio[:midpoint]
-#     second_half = audio[midpoint:]    
-    
-#     # Export the two halves
-#     first_half.export(part_one_path, format="mp3")
-#     second_half.export(part_two_path, format="mp3")
-    
-#     return [part_one_path, part_two_path]
-
 def shrink_and_split_mp3(mp3_file, n_splits):
     """
     Shrinks and splits the MP3 file into `n_splits` parts and returns the split parts in a list.
@@ -207,26 +182,6 @@ def shrink_and_split_mp3(mp3_file, n_splits):
         split_paths.append(split_path)
     
     return split_paths
-
-# def call_replicate_api(replicate_client, mp3_file):
-#     # Read the local audio file in binary mode
-#     with open(mp3_file, "rb") as f:
-#         audio_blob = io.BytesIO(f.read())  # Use BytesIO to create a file-like object
-
-#     # create sepaarte function
-#     output = replicate_client.run(
-#         "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c",
-#         input={
-#             "task": "transcribe",
-#             "audio": audio_blob,
-#             "language": "None",
-#             "timestamp": "chunk",
-#             "batch_size": 64,
-#             "diarise_audio": False
-#         }
-#     )
-
-#     return output
 
 def chunk_text_into_sentences(text):
     # Tokenize the text into sentences
