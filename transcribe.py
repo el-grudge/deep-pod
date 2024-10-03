@@ -31,7 +31,7 @@ def infer_from_replicate(replicate_client, mp3_file):
 def transcribe_with_replicate(replicate_client, mp3_file, n_splits=2):
     start_time = time.time()
     # shrink and split mp3 - return list of partial episodes
-    mp3_files = shrink_and_split_mp3(mp3_file[0])
+    mp3_files = shrink_and_split_mp3(mp3_file[0], n_splits)
     # Using ThreadPoolExecutor to parallelize downloads
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:        
         # Submit the transcription tasks to the executor
