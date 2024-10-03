@@ -1,2 +1,4 @@
 ffmpeg
-sqlite3
+build-essential
+wget
+tar
