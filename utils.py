@@ -6,7 +6,10 @@ import concurrent.futures
 from urllib.parse import urlparse
 import feedparser
 from pydub import AudioSegment
-import io
+import json
+import nltk
+nltk.download('punkt_tab')
+from nltk.tokenize import sent_tokenize
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -18,7 +21,7 @@ def get_episode_title(url):
     parsed_url = urlparse(url)
     path = parsed_url.path
     podcast_id = path.split('/')[-1][2:]
-    episode_title = path.split('/')[3].replace('-', ' ')
+    episode_title = path.split('/')[-2].replace('-', ' ')
     return podcast_id, episode_title
 
 def get_podcast_details(podcast_id):
@@ -132,46 +135,100 @@ def download_all(urls, podcast_name):
         concurrent.futures.wait(futures)
     return list(futures.values())
 
-def shrink_and_split_mp3(mp3_file):
+# def shrink_and_split_mp3(mp3_file):
+#     directory, filename = os.path.split(mp3_file)
+#     basename, ext = os.path.splitext(filename)
+#     part_one_path = os.path.join(directory, f"{basename}_1{ext}")
+#     part_two_path = os.path.join(directory, f"{basename}_2{ext}")
+
+#     audio = AudioSegment.from_mp3(mp3_file)
+#     # Set desired sample rate and bit depth to control size
+#     audio = audio.set_frame_rate(16000)
+#     audio = audio.set_sample_width(16 // 8)  # 8 bits = 1 byte    
+#     audio = audio.set_channels(1)  # Convert to mono
+    
+#     # Get the length of the audio file (in milliseconds)
+#     audio_length = len(audio)
+#     midpoint = audio_length // 2
+#     first_half = audio[:midpoint]
+#     second_half = audio[midpoint:]    
+    
+#     # Export the two halves
+#     first_half.export(part_one_path, format="mp3")
+#     second_half.export(part_two_path, format="mp3")
+    
+#     return [part_one_path, part_two_path]
+
+def shrink_and_split_mp3(mp3_file, n_splits):
+    """
+    Shrinks and splits the MP3 file into `n_splits` parts and returns the split parts in a list.
+
+    Args:
+    mp3_file (str): Path to the input MP3 file.
+    n_splits (int): The number of parts to split the audio file into.
+
+    Returns:
+    list: A list of file paths for the split audio parts.
+    """
     directory, filename = os.path.split(mp3_file)
     basename, ext = os.path.splitext(filename)
-    part_one_path = os.path.join(directory, f"{basename}_1{ext}")
-    part_two_path = os.path.join(directory, f"{basename}_2{ext}")
-
+    
+    # Load the audio file
     audio = AudioSegment.from_mp3(mp3_file)
+    
     # Set desired sample rate and bit depth to control size
     audio = audio.set_frame_rate(16000)
-    audio = audio.set_sample_width(16 // 8)  # 8 bits = 1 byte    
+    audio = audio.set_sample_width(16 // 8)  # 16 bits = 2 bytes    
     audio = audio.set_channels(1)  # Convert to mono
     
-    # Get the length of the audio file (in milliseconds)
+    # Get the total length of the audio file (in milliseconds)
     audio_length = len(audio)
-    midpoint = audio_length // 2
-    first_half = audio[:midpoint]
-    second_half = audio[midpoint:]    
     
-    # Export the two halves
-    first_half.export(part_one_path, format="mp3")
-    second_half.export(part_two_path, format="mp3")
+    # Calculate the duration for each split part
+    split_duration = audio_length // n_splits
     
-    return [part_one_path, part_two_path]
+    # List to store the paths of the split audio parts
+    split_paths = []
+    
+    # Loop to split and export each part
+    for i in range(n_splits):
+        start_time = i * split_duration
+        # Handle the last split to include any remaining audio
+        end_time = (i + 1) * split_duration if i < n_splits - 1 else audio_length
+        split_audio = audio[start_time:end_time]
+        
+        # Generate the file name for each split part
+        split_path = os.path.join(directory, f"{basename}_part_{i+1}{ext}")
+        
+        # Export the split part
+        split_audio.export(split_path, format="mp3")
+        
+        # Add the split part path to the list
+        split_paths.append(split_path)
+    
+    return split_paths
 
-def call_replicate_api(replicate_client, mp3_file):
-    # Read the local audio file in binary mode
-    with open(mp3_file, "rb") as f:
-        audio_blob = io.BytesIO(f.read())  # Use BytesIO to create a file-like object
+# def call_replicate_api(replicate_client, mp3_file):
+#     # Read the local audio file in binary mode
+#     with open(mp3_file, "rb") as f:
+#         audio_blob = io.BytesIO(f.read())  # Use BytesIO to create a file-like object
 
-    # create sepaarte function
-    output = replicate_client.run(
-        "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c",
-        input={
-            "task": "transcribe",
-            "audio": audio_blob,
-            "language": "None",
-            "timestamp": "chunk",
-            "batch_size": 64,
-            "diarise_audio": False
-        }
-    )
+#     # create sepaarte function
+#     output = replicate_client.run(
+#         "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c",
+#         input={
+#             "task": "transcribe",
+#             "audio": audio_blob,
+#             "language": "None",
+#             "timestamp": "chunk",
+#             "batch_size": 64,
+#             "diarise_audio": False
+#         }
+#     )
 
-    return output
+#     return output
+
+def chunk_text_into_sentences(text):
+    # Tokenize the text into sentences
+    sentences = sent_tokenize(text)
+    return sentences

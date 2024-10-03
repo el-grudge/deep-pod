@@ -104,7 +104,7 @@ def choose_transcription_method():
                     except:
                         st.warning("Invalid API key. Please provide a valid API token.")
             elif transcription_method=="2. Local transcription":
-                st.warning("Local transcription under development")
+                update_session(transcription_method_selected=True, transcription_method=transcription_method)
         else:
             st.success("The sample podcast doesn't require a transcription method.")
             update_session(transcription_method_selected=True)

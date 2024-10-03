@@ -1,8 +1,7 @@
 from minsearch import Index as minsearch
-from utils import get_episode_title, get_podcast_details, get_feed_details, search_for_episode, fetch_latest_episode, download_all, shrink_and_split_mp3, call_replicate_api
+from utils import get_episode_title, get_podcast_details, get_feed_details, search_for_episode, fetch_latest_episode, download_all
 import json
-import time
-import concurrent.futures
+from transcribe import transcribe_with_replicate, transcribe_with_whistler
 
 def create_minsearch_index(index_name):
     return minsearch(
@@ -35,9 +34,11 @@ def create_chroma_index(client, index_name):
     existing_collections = client.list_collections()
 
     # Check if the collection exists
-    if index_name in existing_collections[0].name:
+    if index_name in [collection.name for collection in existing_collections]:
         # Delete the collection if it exists
         client.delete_collection(index_name)
+    else:
+        print(f"Index {index_name} does not exist in the current collection.")
 
     # Create or get a collection with cosine distance
     index = client.get_or_create_collection(
@@ -128,30 +129,30 @@ def download_podcast(**kwargs):
         episode_details = download_episode_from_name(found_podcasts[selected_index]['collectionId'], found_podcasts[selected_index]['collectionName'])
     return episode_details
 
-def transcribe_with_replicate(replicate_client, mp3_file):
-    start_time = time.time()
-    # shrink and split mp3 - return list of partial episodes
-    mp3_files = shrink_and_split_mp3(mp3_file[0])
-    # Using ThreadPoolExecutor to parallelize downloads
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:        
-        # Submit the transcription tasks to the executor
-        futures = {
-            executor.submit(call_replicate_api, replicate_client, mp3_file): i for i, mp3_file in enumerate(mp3_files)
-        }
-        # Collect the results in the original order based on submission index
-        results = [None] * len(mp3_files)
-        for future in concurrent.futures.as_completed(futures):
-            i = futures[future]  # Index of the mp3 file part
-            results[i] = future.result()  # Store result in the correct index
-    chunks = []
-    text = ''
-    for output in results:
-        chunks += output['chunks']
-        text = " ".join([text, output['text']])
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"Time to run the command: {execution_time} seconds")
-    return chunks, text
+# def transcribe_with_replicate(replicate_client, mp3_file):
+#     start_time = time.time()
+#     # shrink and split mp3 - return list of partial episodes
+#     mp3_files = shrink_and_split_mp3(mp3_file[0], 2) # try 4
+#     # Using ThreadPoolExecutor to parallelize downloads
+#     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:        
+#         # Submit the transcription tasks to the executor
+#         futures = {
+#             executor.submit(call_replicate_api, replicate_client, mp3_file): i for i, mp3_file in enumerate(mp3_files)
+#         }
+#         # Collect the results in the original order based on submission index
+#         results = [None] * len(mp3_files)
+#         for future in concurrent.futures.as_completed(futures):
+#             i = futures[future]  # Index of the mp3 file part
+#             results[i] = future.result()  # Store result in the correct index
+#     chunks = []
+#     text = ''
+#     for output in results:
+#         chunks += output['chunks']
+#         text = " ".join([text, output['text']])
+#     end_time = time.time()
+#     execution_time = end_time - start_time
+#     print(f"Time to run the command: {execution_time} seconds")
+#     return chunks, text
 
 def transcribe_podcast(**kwargs):
     podcast_option = kwargs['episode_option']
@@ -164,7 +165,7 @@ def transcribe_podcast(**kwargs):
         if transcription_method == "1. Replicate":
             chunks, text = transcribe_with_replicate(kwargs['transcription_client'], episode_details['filenames'])
         elif transcription_method == "2. Local transcription":
-            ...
+            chunks, text = transcribe_with_whistler(episode_details['filenames'], n_splits=2) # 4 splits took 800 seconds / try it in streamlit
     
     return {'chunks': chunks, 'text': text}
 
