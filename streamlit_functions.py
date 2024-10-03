@@ -38,23 +38,21 @@ def choose_podcast_option():
         update_session(episode_option_selected=True, episode_option=episode_option, episode_url=episode_url)
     elif episode_option == "3. Provide a name of a podcast to explore its most recent episode":
         term = st.text_input("Enter a search term for podcasts:")
-        if st.button("Search Podcasts"):
-            try:
+        try:
+            if term != '':
                 found_podcasts = search_podcasts(term)
                 if found_podcasts['status'] == 'Fail':
                     raise Exception
                 else:
-                    podcast_names = [f"{podcast['collectionName']} by {podcast['artistName']}" for podcast in found_podcasts]
+                    podcast_names = [f"{podcast['collectionName']} by {podcast['artistName']}" for podcast in found_podcasts['podcasts']]
                     selected_podcast = st.selectbox("Select a podcast:", podcast_names)
-                    selected_index = podcast_names.index(selected_podcast)
-                    update_session(episode_option_selected=True, episode_option=episode_option, found_podcasts=found_podcasts, selected_index=selected_index)
-            except Exception:
-                st.warning("Please enter a valid search term.")
+                    selected_index=podcast_names.index(selected_podcast)
+                    update_session(episode_option_selected=True, episode_option=episode_option, found_podcasts=found_podcasts['podcasts'], selected_index=selected_index)
+        except Exception:
+            st.warning("Please enter a valid search term.")
 
 def choose_encoder():
     st.subheader('Select a sentence encoder')
-    # if st.session_state.get('episode_option', False):
-    #     if st.session_state['episode_option'] != "1. Try a sample":
     sentence_encoder = st.radio(
         "Choose your option:",
         options = (
@@ -76,10 +74,7 @@ def choose_encoder():
                 response = oa_embedding_client.models.list()
                 update_session(sentence_encoder_selected=True, sentence_encoder=sentence_encoder, embedding_client=oa_embedding_client, embedding_model=embedding_model)
             except:
-                st.warning("Invalid API key. Please provide a valid API token.")            
-        # else:
-        #     st.success("The sample podcast doesn't require a sentence encoder.")
-        #     update_session(sentence_encoder_selected=True, sentence_encoder=None)
+                st.warning("Invalid API key. Please provide a valid API token.")
 
 def choose_transcription_method():
     st.subheader('Select a transcription method')
@@ -169,7 +164,7 @@ def choose_llm():
                 except:
                     st.warning("Invalid API key. Please provide a valid API token.")
         else:
-            oa_client = st.session_state['oa_embedding_client']
+            oa_client = st.session_state['embedding_client']
             update_session(llm_option_selected=True, llm_option=llm_option, llm_client=oa_client)
 
     elif llm_option == "2. FLAN-5":

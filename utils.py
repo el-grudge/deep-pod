@@ -5,6 +5,8 @@ import os
 import concurrent.futures
 from urllib.parse import urlparse
 import feedparser
+from pydub import AudioSegment
+import io
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -30,16 +32,19 @@ def get_podcast_details(podcast_id):
         podcast_details['status'] = 'Fail'
     return podcast_details
 
-def get_feed_details(sentence_encoder, feed_url):
+def get_feed_details(feed_url, **kwargs):
     # parse_podcast_feed
     feed = feedparser.parse(feed_url)
 
-    docuemnts = []
+    documents = []
     titles = [remove_punctuation(episode['title']) for episode in feed.entries]
 
     # Batch encode the titles
-    title_vectors = sentence_encoder.encode(titles, batch_size=32).tolist()  # You can adjust batch_size for your system
-
+    if kwargs['sentence_encoder'] == "1. T5":
+        title_vectors = kwargs['encoder'].encode(titles, batch_size=32).tolist()
+    elif kwargs['sentence_encoder'] == "2. OpenAI":
+        title_vectors = [kwargs['embedding_client'].embeddings.create(model=kwargs['embedding_model'], input=title).data[0].embedding[:768] for title in titles]
+    
     # Iterate through feed.entries and use precomputed vectors
     for i, episode in enumerate(feed.entries):
         feed_dict = {
@@ -50,13 +55,18 @@ def get_feed_details(sentence_encoder, feed_url):
             'title_vector': title_vectors[i]
         }
 
-        docuemnts.append(feed_dict)
+        documents.append(feed_dict)
 
-    return docuemnts
+    return documents
 
-def search_for_episode(sentence_encoder, episode_title, feed_details):
+def search_for_episode(episode_title, feed_details, **kwargs):
     """search for episode """
-    query_vector = sentence_encoder.encode(remove_punctuation(episode_title)).tolist()
+
+    # Batch encode the titles
+    if kwargs['sentence_encoder'] == "1. T5":
+        query_vector = kwargs['encoder'].encode(remove_punctuation(episode_title)).tolist()
+    elif kwargs['sentence_encoder'] == "2. OpenAI":
+        query_vector = kwargs['embedding_client'].embeddings.create(model=kwargs['embedding_model'], input=remove_punctuation(episode_title)).data[0].embedding[:768] 
 
     [d.update({'cos_sim': pytorch_cos_sim(d['title_vector'], query_vector)}) for d in feed_details]
 
@@ -121,3 +131,47 @@ def download_all(urls, podcast_name):
         # Ensure all tasks are completed
         concurrent.futures.wait(futures)
     return list(futures.values())
+
+def shrink_and_split_mp3(mp3_file):
+    directory, filename = os.path.split(mp3_file)
+    basename, ext = os.path.splitext(filename)
+    part_one_path = os.path.join(directory, f"{basename}_1{ext}")
+    part_two_path = os.path.join(directory, f"{basename}_2{ext}")
+
+    audio = AudioSegment.from_mp3(mp3_file)
+    # Set desired sample rate and bit depth to control size
+    audio = audio.set_frame_rate(16000)
+    audio = audio.set_sample_width(16 // 8)  # 8 bits = 1 byte    
+    audio = audio.set_channels(1)  # Convert to mono
+    
+    # Get the length of the audio file (in milliseconds)
+    audio_length = len(audio)
+    midpoint = audio_length // 2
+    first_half = audio[:midpoint]
+    second_half = audio[midpoint:]    
+    
+    # Export the two halves
+    first_half.export(part_one_path, format="mp3")
+    second_half.export(part_two_path, format="mp3")
+    
+    return [part_one_path, part_two_path]
+
+def call_replicate_api(replicate_client, mp3_file):
+    # Read the local audio file in binary mode
+    with open(mp3_file, "rb") as f:
+        audio_blob = io.BytesIO(f.read())  # Use BytesIO to create a file-like object
+
+    # create sepaarte function
+    output = replicate_client.run(
+        "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c",
+        input={
+            "task": "transcribe",
+            "audio": audio_blob,
+            "language": "None",
+            "timestamp": "chunk",
+            "batch_size": 64,
+            "diarise_audio": False
+        }
+    )
+
+    return output
