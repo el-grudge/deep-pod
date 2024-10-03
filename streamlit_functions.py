@@ -146,7 +146,8 @@ def choose_vector_db():
             except Exception as e:
                 st.warning(f"An error occurred: {e}")
     elif vector_db=="3. ChromaDB":
-        chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        # chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        chroma_client = chromadb.PersistentClient(path=":memory:", store="duckdb")
         update_session(vector_db=vector_db, vector_db_client=chroma_client)
         update_session(index=create_index(**st.session_state))
         update_session(vector_db_selected=True, index_created=True)
