@@ -48,6 +48,8 @@ def transcribe_with_replicate(replicate_client, mp3_file, n_splits=2):
     for output in results:
         chunks += output['chunks']
         text = " ".join([text, output['text']])
+    for i, chunk in enumerate(chunks):
+        chunk['id'] = str(i+1)
     end_time = time.time()
     execution_time = end_time - start_time
     print(f"Time to run the command: {execution_time} seconds")
@@ -108,6 +110,8 @@ def transcribe_with_whistler(filenames, n_splits=2):
     for output in results:
         chunks += output['chunks']
         text = " ".join([text, output['text']])
+    for i, chunk in enumerate(chunks):
+        chunk['id'] = str(i+1)
     end_time = time.time()
     execution_time = end_time - start_time
     print(f"Time to run the command: {execution_time} seconds")

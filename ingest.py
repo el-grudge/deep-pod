@@ -7,7 +7,7 @@ def create_minsearch_index(index_name):
     return minsearch(
         index_name = index_name,
         text_fields = ['text'],
-        keyword_fields = ['']
+        keyword_fields = ['id']
     )
 
 def create_es_index(client, index_name):
@@ -19,6 +19,7 @@ def create_es_index(client, index_name):
         },
         "mappings": {
             "properties": {
+                "id": {"type": "keyword", "store": True},
                 "text": {"type": "text"},
                 "text_vector": {"type": "dense_vector", "dims": 768},
             }
@@ -149,6 +150,7 @@ def create_oa_embedding(client, model, chunks):
 
     for sentence in chunks:
         temp_dict = {
+            'id': sentence['id'],
             'text': sentence['text'],
             'text_vector': client.embeddings.create(model=model, input=sentence['text']).data[0].embedding[:768] # openai embeddings 3 provides flexibility when cutting embedding size 
         }
@@ -161,6 +163,7 @@ def create_t5_embedding(encoder, chunks):
 
     for sentence in chunks:
         temp_dict = {
+            'id': sentence['id'],
             'text': sentence['text'],
             'text_vector': encoder.encode(sentence["text"]).tolist()
         }
@@ -180,7 +183,7 @@ def encode_podcast(**kwargs):
     return {'documents': documents}
 
 def populate_minsearch_index(docs, index):
-    documents = [{'text': doc['text']} for doc in docs]
+    documents = [{'id': str(doc['id']), 'text': doc['text']} for doc in docs]
     index.fit(documents)
 
 def populate_es_index(documents, index_name, client):
@@ -194,9 +197,12 @@ def populate_es_index(documents, index_name, client):
     return index_name
 
 def populate_chroma_collection(documents, collection):
-    ids = [str(i) for i in range(len(documents))]
+    ids = [str(i+1) for i in range(len(documents))]
     embeddings = [doc['text_vector'] for doc in documents]
     texts = [doc['text'] for doc in documents]
+
+    # print(ids[:4])
+    # print('string')
     
     collection.add(
         ids=ids,

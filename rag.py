@@ -37,6 +37,7 @@ def search(query, **kwargs):
         # Execute the search query
         results = kwargs['vector_db_client'].search(index=kwargs['index_name'], body=search_query)
         results = results['hits']['hits']
+        
     elif vector_db=="3. ChromaDB":
         # Encode the query
         if kwargs['sentence_encoder'] == "1. T5":
