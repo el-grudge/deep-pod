@@ -109,6 +109,24 @@ To reproduce the work from the GitHub repository "deep-pod":
 - Clone the repo: `git clone https://github.com/el-grudge/deep-pod.git`
 - Install required packages: `pip install -r requirements.txt`
 - Download language model with `python -m spacy download en_core_web_sm`
+- Install ffmpeg package: 
+
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+- If you're using using a GPU make sure to include this line in your .bashrc
+
+```
+export LD_LIBRARY_PATH=/opt/saturncloud/envs/saturn/lib/python3.9/site-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH;
+```
+
+Then restart bash with this command:
+
+```bash
+source bashrc
+```
 
 **Access Data**
 - Episodes can be downloaded by providing a URL or podcast name.
