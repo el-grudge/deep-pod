@@ -66,7 +66,13 @@ Check the RAG code [here](rag.py)
 
 ## Retrieval evaluation
 
-⚠️ In progress (...)
+I compared the retrieval performance of the 3 index utilized here using HitRate and MRR metrics.
+
+- [Minsearch](./Evaluate-Minsearch.ipynb) > {'hit_rate': 0.7515828677839851, 'mrr': 0.5692242322130585}
+- [Elastcisearch](./Evaluate-ES.ipynb) -> {'hit_rate': 0.7456238361266294, 'mrr': 0.6092489137181873}
+- [ChromDB](./Evaluate-Chroma.ipynb) -> {'hit_rate': 0.7080074487895717, 'mrr': 0.2965114835505973}
+
+Elasticsearch achieved the highest MRR, while Minsearch achieved the highest Hit-Rate
 
 ## RAG evaluation
 
