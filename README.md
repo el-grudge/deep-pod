@@ -1,5 +1,7 @@
 # deep-pod
 
+![demo](demo.gif)
+
 ## Problem description
 
 This is deep-pod 🎙️, a streamlit app that allows you to interact with your podcast through:
